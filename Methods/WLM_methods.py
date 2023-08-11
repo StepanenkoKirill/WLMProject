@@ -21,7 +21,7 @@ def set_wl(amount):
     if (wlmData.dll.SetPIDCourseNum(1, new_PIDC) == wlmConst.ResERR_NoErr):
         print("Successful write-in %s" % new_PIDC.value.decode())
 
-def set_wl2(amount: float):
+def set_wl2(amount):
     '''
     The same as set_wl but without feedback
     :param amount:
