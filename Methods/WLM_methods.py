@@ -9,7 +9,9 @@ import matplotlib.pyplot as plt
 import math
 def set_wl(amount):
     '''
-    The function can
+    The function can set PID_course of every type, not only constant
+    we can place here some law, e.g. sin or cos but there is some style of doing
+    this that is said in manual to WLM
     :param amount:
     :return:
     '''
@@ -20,6 +22,11 @@ def set_wl(amount):
         print("Successful write-in %s" % new_PIDC.value.decode())
 
 def set_wl2(amount: float):
+    '''
+    The same as set_wl but without feedback
+    :param amount:
+    :return:
+    '''
     new_b = bytes('= ' + str(amount), encoding='utf-8')
     new_PIDC = ctypes.create_string_buffer(new_b)
     wlmData.dll.SetPIDCourseNum(1, new_PIDC)
