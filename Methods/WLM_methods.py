@@ -6,6 +6,8 @@ import wlmData
 import wlmConst
 import time
 import matplotlib.pyplot as plt
+import pyvisa
+import ThorlabsPM100
 import math
 def set_wl(amount):
     '''
@@ -353,3 +355,62 @@ def triangle_PID_course(mode: bool, down_reference, upper_reference, stabilisati
                 break
         if (time.time() - time1 > time_limit):
             break
+def stepping_PID_course(mode: bool, down_reference, upper_reference, stabilisation_time,
+                        PID_step_mV, time_limit):
+    assert stabilisation_time < time_limit, "Error: too short time limit"
+    koef = -2.23e-06 * 1.5225
+    flag = False
+    d_reference = down_reference
+    u_reference = upper_reference
+    delta_freq = koef * PID_step_mV
+    d = {}
+    i = 0
+    if (not mode):
+        d_reference = wlmData.dll.ConvertUnit(d_reference, wlmConst.cReturnWavelengthVac,
+                                              wlmConst.cReturnFrequency)
+        u_reference = wlmData.dll.ConvertUnit(upper_reference, wlmConst.cReturnWavelengthVac,
+                                              wlmConst.cReturnFrequency)
+    max_PID_val = 4096
+
+    # initialising powermeter
+    rm = pyvisa.ResourceManager()
+    inst = rm.open_resource("USB0::0x1313::0x8078::P0008894::INSTR")
+    power_meter = ThorlabsPM100.ThorlabsPM100(inst=inst)
+    # end of initialisation
+
+    time1 = time.time()
+    start_PID_point = wlmData.dll.GetDeviationSignalNum(1, 0)
+    reference_const_PID_stabilisator(True, d_reference, koef, max_PID_val,
+                                     wlmData.dll.GetExposureNum(1, 1, 0) * 1.2, stabilisation_time, start_PID_point)
+    PID_current = wlmData.dll.GetDeviationSignalNum(1, 0)
+
+    d[i] = (abs(wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(1, 0), wlmConst.cReturnWavelengthVac,
+                                        wlmConst.cReturnFrequency) - d_reference), power_meter.read)
+    i += 1
+    while (True):
+        flag = False
+        PID_current = PID_current + PID_step_mV
+        cur_freq = wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(1, 0), wlmConst.cReturnWavelengthVac,
+                                           wlmConst.cReturnFrequency)
+        if (cur_freq + delta_freq > u_reference):
+            break
+        wlmData.dll.SetDeviationSignalNum(1, PID_current)
+        freq = time_counter(cur_freq)
+        d[i] = (abs(freq - d_reference), power_meter.read)
+        if(d[i][0]/d[i-1][0] > 1000):
+            del d[i]
+            flag = True
+        if(not flag):
+            i += 1
+        if (time.time() - time1 > time_limit):
+            return d, i
+    start_PID_point = wlmData.dll.GetDeviationSignalNum(1, 0)
+    cur_freq = wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(1, 0), wlmConst.cReturnWavelengthVac,
+                                       wlmConst.cReturnFrequency)
+    reference_const_PID_stabilisator(True, cur_freq, koef, max_PID_val,
+                                     wlmData.dll.GetExposureNum(1, 1, 0) * 1.2, stabilisation_time, start_PID_point)
+    PID_current = wlmData.dll.GetDeviationSignalNum(1, 0)
+
+    d[i] = (abs(wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(1, 0), wlmConst.cReturnWavelengthVac,
+                                        wlmConst.cReturnFrequency) - d_reference), power_meter.read)
+    return d, i
