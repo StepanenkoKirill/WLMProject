@@ -12,7 +12,7 @@ def set_wl(amount):
     The function can set PID_course of every type, not only constant
     we can place here some law, e.g. sin or cos but there is some style of doing
     this that is said in manual to WLM
-    :param amount:
+    :param amount: the set of PID course
     :return:
     '''
     new_b = bytes('= ' + str(amount), encoding='utf-8')
@@ -24,7 +24,7 @@ def set_wl(amount):
 def set_wl2(amount):
     '''
     The same as set_wl but without feedback
-    :param amount:
+    :param amount: the set of PID course
     :return:
     '''
     new_b = bytes('= ' + str(amount), encoding='utf-8')
