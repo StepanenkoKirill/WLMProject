@@ -374,6 +374,32 @@ def find_max_mod(absc_list, ord_list):
             break
     return max_mod,freq_of_max_mod,index
 
+def find_breadth_mod(absc_list, ord_list, index_mod):
+    size = len(absc_list)
+    assert index_mod >= 0 and index_mod < size, "Error: index of mod is out of bounds. Check lists of values and index"
+    k1 = index_mod
+    k2 = index_mod
+    barier = ord_list[index_mod] / 2
+    while(ord_list[k1] >= barier):
+        k1+=1
+    while(ord_list[k2] >= barier):
+        k2-=1
+    assert k1 >= 0 and k2 < size, "Error: index is out of bounds. The mod can be cut off"
+    return absc_list[k1]-absc_list[k2]
+def del_mod(absc_list, ord_list, index_mod, breadth):
+    size = len(absc_list)
+    assert index_mod >= 0 and index_mod < size, "Error: index of mod is out of bounds. Check lists of values and index"
+    k1 = index_mod
+    k2 = index_mod
+    left = absc_list[index_mod] - breadth/2
+    right = absc_list[index_mod] + breadth/2
+    while (absc_list[k1] <= right):
+        k1+=1
+    while (absc_list[k2] >= left):
+        k2 -= 1
+    for _ in range(k1 - k2 + 1):
+        del absc_list[k2]
+        del ord_list[k2]
 def stepping_PID_course(mode: bool, down_reference, upper_reference, stabilisation_time,
                         PID_step_mV, time_limit):
     assert stabilisation_time < time_limit, "Error: too short time limit"

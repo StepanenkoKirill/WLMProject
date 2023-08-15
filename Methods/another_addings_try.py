@@ -100,44 +100,75 @@ else:
     u_freq = wlmData.dll.ConvertUnit(upper_reference, wlmConst.cReturnWavelengthVac,
                             wlmConst.cReturnFrequency)
     stabilisation_time = 10
-    PID_step_mV = -1 # negative to make higher frequency
+    PID_step_mV = -0.5 # negative to make higher frequency
     time_limit = 240
     d = WLM_methods.stepping_PID_course(mode, d_freq, u_freq, stabilisation_time,
                         PID_step_mV, time_limit)
 
-    #plot find_k returning list
-    x = [d[0][i][0] for i in range(d[1])]
-    y = [d[0][i][1] for i in range(d[1])]
-    max_mod1 = max(y)
+    x_absc = [d[0][i][0] for i in range(d[1])]
+    y_ord = [d[0][i][1] for i in range(d[1])]
+    x = x_absc.copy()
+    y = y_ord.copy()
+
+    cort = WLM_methods.find_max_mod(x,y)
+    max_mod_power = cort[0]
+    max_mod_freq = cort[1]
+    max_mod_index = cort[2]
+    max_mod_breadth = WLM_methods.find_breadth_mod(x, y, max_mod_index)
+
+    WLM_methods.del_mod(x, y, max_mod_index, max_mod_breadth)
+
+    cort2 = WLM_methods.find_max_mod(x,y)
+    max_mod_power2 = cort2[0]
+    max_mod_freq2 = cort2[1]
+    max_mod_index2 = cort2[2]
+    max_mod_breadth2 = WLM_methods.find_breadth_mod(x, y, max_mod_index2)
+
+    Delta_mod = max_mod_freq - max_mod_freq2
+    title = "1st mod breadth: " + str(max_mod_breadth) + "\n2nd mod breadth: " + str(max_mod_breadth2) + "\nDelta mod: " + str(Delta_mod)
+
+    # plot find_k returning list
     fig, ax = plt.subplots(figsize=(5, 3), layout='constrained')
     ax.set_xlabel('Delta frequency [THz]')
     ax.set_ylabel('Power [W]')
     ax.set_title('Power frequency dependency')
     ax.grid()
-    ax.plot(x, y)
-    plt.ylim(min(y), max(y)+0.05*max(y))
+    ax.plot(x_absc, y_ord, label=title)
+    plt.ylim(min(y_ord), max(y_ord)+0.05*max(y_ord))
     plt.show()
 
+    # plots 2 graphs near each other. good to see the difference
+    # fig, (ax1, ax2) = plt.subplots(1,2,figsize=(5, 3), layout='constrained')
+    # ax1.set_xlabel('Delta frequency [THz]')
+    # ax1.set_ylabel('Power [W]')
+    # ax1.set_title('Power frequency dependency')
+    # ax1.grid()
+    # ax1.plot(x, y)
+    # ax2.set_xlabel('Delta frequency [THz]')
+    # ax2.set_ylabel('Power [W]')
+    # ax2.set_title('Power frequency dependency')
+    # ax2.grid()
+    # ax2.plot(x_absc, y_ord)
+    # plt.ylim(min(y_ord), max(y_ord)+0.05*max(y_ord))
+    # plt.show()
 
-
-
-    freq_of_max_mod1 = 0
-    freq_of_max_mod2 = 0
-    print("Max mode 1 %.12f" % max_mod1)
-    for k in range(d[1]):
-        if(y[k] == max_mod1):
-            freq_of_max_mod1 = x[k]
-            break
-    y.remove(max_mod1)
-    x.remove(freq_of_max_mod1)
-    max_mod2 = max(y)
-    print("Max mode 2 %.12f" % max_mod2)
-    for k in range(d[1]):
-        if(y[k] == max_mod2):
-            freq_of_max_mod2 = x[k]
-            break
-    print("Power modes difference %.12f" % abs(max_mod1-max_mod2))
-    print("Frequency modes difference %.12f" % abs(freq_of_max_mod1 - freq_of_max_mod2))
+    # freq_of_max_mod1 = 0
+    # freq_of_max_mod2 = 0
+    # print("Max mode 1 %.12f" % max_mod1)
+    # for k in range(d[1]):
+    #     if(y[k] == max_mod1):
+    #         freq_of_max_mod1 = x[k]
+    #         break
+    # y.remove(max_mod1)
+    # x.remove(freq_of_max_mod1)
+    # max_mod2 = max(y)
+    # print("Max mode 2 %.12f" % max_mod2)
+    # for k in range(d[1]):
+    #     if(y[k] == max_mod2):
+    #         freq_of_max_mod2 = x[k]
+    #         break
+    # print("Power modes difference %.12f" % abs(max_mod1-max_mod2))
+    # print("Frequency modes difference %.12f" % abs(freq_of_max_mod1 - freq_of_max_mod2))
     # print(WLM_methods.wl_stabilisation_through_PID_TESTER(ref, koef, max_dev,exposition, start_PID_point))
     # print(wlmData.dll.GetWavelengthNum(1, 0))
     # wave1 = wlmData.dll.ConvertUnit(580.038001, wlmConst.cReturnWavelengthVac,
