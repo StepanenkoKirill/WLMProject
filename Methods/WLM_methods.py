@@ -355,6 +355,25 @@ def triangle_PID_course(mode: bool, down_reference, upper_reference, stabilisati
                 break
         if (time.time() - time1 > time_limit):
             break
+
+
+def initialise_power_meter(connection_row):
+    rm = pyvisa.ResourceManager()
+    inst = rm.open_resource(connection_row)
+    power_meter = ThorlabsPM100.ThorlabsPM100(inst=inst)
+    return power_meter
+
+def find_max_mod(absc_list, ord_list):
+    max_mod = max(ord_list)
+    freq_of_max_mod = 0.
+    index = -1
+    for k in range(len(absc_list)):
+        if (ord_list[k] == max_mod):
+            freq_of_max_mod = absc_list[k]
+            index = k
+            break
+    return max_mod,freq_of_max_mod,index
+
 def stepping_PID_course(mode: bool, down_reference, upper_reference, stabilisation_time,
                         PID_step_mV, time_limit):
     assert stabilisation_time < time_limit, "Error: too short time limit"
@@ -372,11 +391,7 @@ def stepping_PID_course(mode: bool, down_reference, upper_reference, stabilisati
                                               wlmConst.cReturnFrequency)
     max_PID_val = 4096
 
-    # initialising powermeter
-    rm = pyvisa.ResourceManager()
-    inst = rm.open_resource("USB0::0x1313::0x8078::P0008894::INSTR")
-    power_meter = ThorlabsPM100.ThorlabsPM100(inst=inst)
-    # end of initialisation
+    power_meter = initialise_power_meter("USB0::0x1313::0x8078::P0008894::INSTR")
 
     time1 = time.time()
     start_PID_point = wlmData.dll.GetDeviationSignalNum(1, 0)
@@ -393,6 +408,18 @@ def stepping_PID_course(mode: bool, down_reference, upper_reference, stabilisati
         cur_freq = wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(1, 0), wlmConst.cReturnWavelengthVac,
                                            wlmConst.cReturnFrequency)
         if (cur_freq + delta_freq > u_reference):
+            percent = (u_reference-cur_freq) / delta_freq
+            if( percent > 0.1 and percent <= 1. and abs(PID_step_mV*percent) >= 0.125):
+                PID_current = PID_current - PID_step_mV
+                PID_current = PID_current + PID_step_mV*percent
+                wlmData.dll.SetDeviationSignalNum(1, PID_current)
+                freq = time_counter(cur_freq)
+                d[i] = (abs(freq - d_reference), power_meter.read)
+                if (d[i][0] / d[i - 1][0] > 1000):
+                    del d[i]
+                    flag = True
+                if (not flag):
+                    i += 1
             break
         wlmData.dll.SetDeviationSignalNum(1, PID_current)
         freq = time_counter(cur_freq)
@@ -403,14 +430,5 @@ def stepping_PID_course(mode: bool, down_reference, upper_reference, stabilisati
         if(not flag):
             i += 1
         if (time.time() - time1 > time_limit):
-            return d, i
-    start_PID_point = wlmData.dll.GetDeviationSignalNum(1, 0)
-    cur_freq = wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(1, 0), wlmConst.cReturnWavelengthVac,
-                                       wlmConst.cReturnFrequency)
-    reference_const_PID_stabilisator(True, cur_freq, koef, max_PID_val,
-                                     wlmData.dll.GetExposureNum(1, 1, 0) * 1.2, stabilisation_time, start_PID_point)
-    PID_current = wlmData.dll.GetDeviationSignalNum(1, 0)
-
-    d[i] = (abs(wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(1, 0), wlmConst.cReturnWavelengthVac,
-                                        wlmConst.cReturnFrequency) - d_reference), power_meter.read)
+            break
     return d, i

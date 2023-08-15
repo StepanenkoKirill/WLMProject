@@ -118,6 +118,9 @@ else:
     plt.ylim(min(y), max(y)+0.05*max(y))
     plt.show()
 
+
+
+
     freq_of_max_mod1 = 0
     freq_of_max_mod2 = 0
     print("Max mode 1 %.12f" % max_mod1)
