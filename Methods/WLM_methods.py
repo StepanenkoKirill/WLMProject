@@ -9,6 +9,191 @@ import matplotlib.pyplot as plt
 import pyvisa
 import ThorlabsPM100
 import math
+
+# Gets the exposition. Parameter is the channel to use. Param can be set in separate scroll or else in UI
+# Return value can be shown in text form in UI
+def get_exposure1(chan: int):
+    '''
+        Function to get the exposition time from the 1st ccd array in ms
+
+        Errors: 1 - The Wavelength Meter is not active
+                2 - The specified channel or array index is not available for this Wavelength
+                    Meter version
+        :param chan: channel number
+        :return: the value of exposition or error code
+    '''
+    answer = wlmData.dll.GetExposureNum(chan,1,0)
+    if(answer == wlmConst.ErrWlmMissing):
+        return 1
+    elif(answer == wlmConst.ErrNotAvailable):
+        return 2
+    else:
+        return answer
+
+# in UI there can be a checkbox to turn that on or off.
+def autoexposure(chan: int, setting: bool):
+    '''
+        Sets an exposure mode. Whether setting is true we use auto mode. If false - than manual.
+
+        :param chan: channel to use
+        :param setting: the parameter to turn auto mode on or off
+        :return: 0 or error
+    '''
+    return wlmData.dll.SetExposureModeNum(chan, setting)
+# Sets the exposition. Parameter is the channel to use. Param can be set in separate scroll or else in UI
+# Value to be set can be shown in text form in UI
+def set_exposure1(chan: int, value):
+    '''
+    Sets exposure for the 1st ccd array in ms
+    :param chan: channel to use
+    :param value: value to be set
+    :return: 0 or set_error, -40 - value out of range
+    '''
+    if((wlmData.dll.GetExposureRange(wlmConst.cExpoMin) <= value) and (wlmData.dll.GetExposureRange(wlmConst.cExpoMax) >= value)):
+        return wlmData.dll.SetExposureNum(chan, 1, value)
+    else:
+        return -40
+# This can be used for the feedback with user if some setting went wrong.
+def return_set_errors(switcher_error) -> str:
+    '''
+        The function represents errors of setters
+
+        :param switcher_error: the result of set function (contains error code)
+        Comment: if everything is ok set function will return 0
+        :return: error string
+    '''
+    if (switcher_error == wlmConst.ResERR_WlmMissing):
+        return "The WLM isn't instantiated"
+    elif (switcher_error == wlmConst.ResERR_CouldNotSet):
+        return "The value hasn't been set"
+    elif (switcher_error == wlmConst.ResERR_ParmOutOfRange):
+        return "Parameters are out of range"
+    elif (switcher_error == wlmConst.ResERR_WlmOutOfResources):
+        return "WLM is out of resources"
+    elif (switcher_error == wlmConst.ResERR_WlmInternalError):
+        return "WLM internal error"
+    elif (switcher_error == wlmConst.ResERR_NotAvailable):
+        return "The specified channel or array index is not available for this Wavelength Meter version"
+    elif (switcher_error == wlmConst.ResERR_WlmBusy):
+        return "WLM is busy"
+
+    elif (switcher_error == wlmConst.ResERR_NotInMeasurementMode):
+        return "WLM isn't in measurement mode"
+    elif (switcher_error == wlmConst.ResERR_OnlyInMeasurementMode):
+        return "WLM is only in measurement mode"
+    elif (switcher_error == wlmConst.ResERR_ChannelNotAvailable):
+        return "The channel isn't available"
+    elif (switcher_error == wlmConst.ResERR_ChannelTemporarilyNotAvailable):
+        return "The channel is temporarily not available"
+    elif (switcher_error == wlmConst.ResERR_CalOptionNotAvailable):
+        return "Calibration option isn't available"
+    elif (switcher_error == wlmConst.ResERR_CalWavelengthOutOfRange):
+        return "Calibration wavelength is out of range"
+
+    elif (switcher_error == wlmConst.ResERR_BadCalibrationSignal):
+        return "Bad calibration signal"
+    elif (switcher_error == wlmConst.ResERR_UnitNotAvailable):
+        return "Unit isn't available"
+    elif (switcher_error == wlmConst.ResERR_FileNotFound):
+        return "File not found"
+    elif (switcher_error == wlmConst.ResERR_FileCreation):
+        return "File creation error"
+    elif (switcher_error == wlmConst.ResERR_TriggerPending):
+        return "Trigger pending error"
+    elif (switcher_error == wlmConst.ResERR_TriggerWaiting):
+        return "Trigger waiting error"
+
+    elif (switcher_error == wlmConst.ResERR_NoLegitimation):
+        return "No legitimation error"
+    elif (switcher_error == wlmConst.ResERR_NoTCPLegitimation):
+        return "No TCP legitimation error"
+    elif (switcher_error == wlmConst.ResERR_NotInPulseMode):
+        return "WLM isn't in pulse mode"
+    elif (switcher_error == wlmConst.ResERR_OnlyInPulseMode):
+        return "WLM is only in pulse mode"
+    elif (switcher_error == wlmConst.ResERR_NotInSwitchMode):
+        return "WLM isn't in switch mode"
+    elif (switcher_error == wlmConst.ResERR_OnlyInSwitchMode):
+        return "WLM is only in switch mode"
+    elif (switcher_error == wlmConst.ResERR_TCPErr):
+        return "TCP error"
+    elif (switcher_error == wlmConst.ResERR_StringTooLong):
+        return "String too long"
+    elif (switcher_error == wlmConst.ResERR_InterruptedByUser):
+        return "Interrupted by user"
+
+# This can be used for the feedback with user if getwavelength or getfrequency went wrong
+# for ex. if GetWavelengthNum returns wlmConst.ErrWlmMissing val we can inform user with dialog
+def get_wavelength_frequency_errors(switcher_error) -> str:
+    '''
+        The function represents errors of GetWavelength and GetFrequency
+
+        :param switcher_error: the result of set function (contains error code)
+        Comment: if everything is ok set function will return 0
+        :return: error string
+    '''
+    if (switcher_error == wlmConst.ErrWlmMissing):
+        return "The Wavelength Meter is not active"
+    elif (switcher_error == wlmConst.ErrNotAvailable):
+        return "The specified channel or array index is not available for this Wavelength Meter version"
+    elif (switcher_error == wlmConst.ErrNoValue):
+        return "No value"
+    elif (switcher_error == wlmConst.ErrNoSignal):
+        return "The Wavelength Meter has not detected any signal."
+    elif (switcher_error == wlmConst.ErrBadSignal):
+        return "The Wavelength Meter has not detected a calculable signal."
+    elif (switcher_error == wlmConst.ErrLowSignal):
+        return "The signal is too small to be calculated properly."
+    elif (switcher_error == wlmConst.ErrBigSignal):
+        return "The signal is too large to be calculated properly, this can happen if the amplitude of the signal is electronically cut caused by stack overflow."
+    elif (switcher_error == wlmConst.ErrNoPulse):
+        return "The detected signal could not be divided into separated pulses."
+
+# Gets the frequency. Parameter is the channel to use. Param can be set in separate scroll or else in UI
+# Return value can be shown in text form in UI
+def get_frequency(chan: int):
+    '''
+        Function to get current frequency
+
+        :param chan: the channel to be used
+        :return: Frequency in THz or error
+    '''
+    return wlmData.dll.GetFrequencyNum(chan, 0)
+# the same as previous
+def get_wavelength(chan: int):
+    '''
+        Function to get current wavelength
+
+        :param chan: the channel to be used
+        :return: Wavelength in nm or error
+    '''
+    return wlmData.dll.GetWavelengthNum(chan, 0)
+
+# This gets PID in mV. UI can show the result value. Parameter is the channel to use - that should be specified by user
+# The result depends on the timing that is set in ScanMeasurement method. We can make checkbox whether to show or not the
+# PID in separate field
+def get_current_PID(chan: int):
+    '''
+        Returns the analog output voltage of a specified DAC channel in
+        Wavelength Meter versions with Deviation output or PID regulation function.
+
+        :param chan: channel number
+        :return: the value of output WLM DAC channel PID in mV
+    '''
+    answer = wlmData.dll.GetDeviationSignalNum(chan, 0)
+    return answer
+
+# this function sets the PID but doesn't "hold" it
+def set_PID_const(chan: int, value: float):
+    '''
+        Sets the PID laser control manually in mV with constant val
+
+        :param chan: channel to use
+        :param value: value to set
+        :return: 0 if ok and error code if something wrong
+        Comment: set errors were described separately
+    '''
+    return wlmData.dll.SetDeviationSignalNum(chan, value)
 def set_wl(amount):
     '''
     The function can set PID_course of every type, not only constant
