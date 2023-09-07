@@ -643,3 +643,22 @@ def stepping_PID_course(mode: bool, down_reference, upper_reference, stabilisati
         if (time.time() - time1 > time_limit):
             break
     return d, i
+
+def measurements(cycle_steps: int, initial_freq: float, delta_freq: float, time_pause_set: int,
+                 time_pause_getvals: float, precision: int, chan: int):
+    power_meter = initialise_power_meter("USB0::0x1313::0x8078::P0008894::INSTR")
+    file = open("Results.txt", 'w')
+    i = 0
+    while(i < cycle_steps):
+        frequency = round(initial_freq + i*delta_freq, precision)
+        time1 = time.time()
+        reference_const_PID_stabilisator_with_timing(True, frequency, cDependFrequencyPID,
+                                         4096,  wlmData.dll.GetExposureNum(chan,1,0)*1.1, time_pause_set,
+                                         wlmData.dll.GetDeviationSignalNum(chan, 0))
+        frequency1 = round(wlmData.dll.GetFrequencyNum(chan, 0), precision)
+        power1 = round(power_meter.read, precision)
+        time.sleep(time_pause_getvals * 0.001)
+        time2 = time.time()
+        file.write(str(round((time2-time1)*1000,2)) + str(power1) + str(frequency1) + str(frequency) + '\n')
+        i+=1
+    file.close()
