@@ -662,3 +662,73 @@ def measurements(cycle_steps: int, initial_freq: float, delta_freq: float, time_
         file.write(str(round((time2-time1)*1000,2)) + str(power1) + str(frequency1) + str(frequency) + '\n')
         i+=1
     file.close()
+
+    def reference_const_PID_stabilisator_with_timing(mode: bool, reference_wl: float, koef: float, max_PID_val: int,
+                                                     time_pause: int, stabilisation_time: int, start_PID_point=4096 / 2,
+                                                     chan=1):
+        '''
+            The function stabilises the reference value of frequency
+            2nd version of algorithm
+
+            :param mode: True - reference_wl should be frequency
+            :param reference_wl: frequency or wavelength (no matter in fact, unless you didn't set the right mode. We use frequencies inside algorithm anyway)
+            :param koef: koef of dependency between PID mV and frequency
+            :param max_PID_val: max val in mV for PID
+            :param time_pause: pause after setting value needed
+            :param start_PID_point: starting point of PID setting.
+            :param chan: shows the channel to use
+            :return: nothing or -42 (PID is out of range)
+        '''
+        stabilised = False
+        PID_step = 0
+        PID_current = start_PID_point
+        reference = reference_wl
+        if (not mode):
+            reference = wlmData.dll.ConvertUnit(reference, wlmConst.cReturnWavelengthVac,
+                                                wlmConst.cReturnFrequency)
+        time1 = time.time()
+        while (True):
+            if (not stabilised):
+                PID_current = PID_current + PID_step
+                wlmData.dll.SetDeviationSignalNum(chan, PID_current)
+                time.sleep(time_pause / 1000)
+            wave_current = wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(chan, 0), wlmConst.cReturnWavelengthVac,
+                                                   wlmConst.cReturnFrequency)
+            delta = reference - wave_current
+            abs_dev = abs(delta)
+            # 0.125 changes in 180 kHz. it's the 7th from point int THz view of freq
+            if (abs_dev >= 10e-07 and abs_dev <= 5 * 10e-07):
+                if (delta > 0):
+                    PID_step = -0.125
+                elif (delta < 0):
+                    PID_step = 0.125
+            elif (abs_dev > 5 * 10e-07 and abs_dev <= 10e-06):
+                if (delta > 0):
+                    PID_step = -0.625
+                elif (delta < 0):
+                    PID_step = 0.625
+            elif (abs_dev > 10e-06 and abs_dev <= 5 * 10e-06):
+                if (delta > 0):
+                    PID_step = -3.125
+                elif (delta < 0):
+                    PID_step = 3.125
+            elif (abs_dev > 5 * 10e-06 and abs_dev <= 10e-05):
+                if (delta > 0):
+                    PID_step = -15.625
+                elif (delta < 0):
+                    PID_step = 15.625
+            elif (abs_dev > 10e-05 and abs_dev <= 10e-04):
+                if (delta > 0):
+                    PID_step = -156.25
+                elif (delta < 0):
+                    PID_step = 156.25
+            elif (abs_dev > 10e-04):
+                PID_step = delta / koef
+            if ((PID_current + PID_step) > max_PID_val or (PID_current + PID_step) < 0):
+                return -42
+            if (round(delta, 7) == 0.0000000):
+                stabilised = True
+            elif (stabilised):
+                stabilised = False
+            if ((time.time() - time1) > stabilisation_time):
+                break
