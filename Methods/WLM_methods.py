@@ -12,7 +12,7 @@ import math
 #-2.23e-06*1.5225
 #-1.3378961881971296e-06
 #-2.23e-06*1.5225
-cDependFrequencyPID = -3.5e-06
+cDependFrequencyPID = -4e-06
 # Gets the exposition. Parameter is the channel to use. Param can be set in separate scroll or else in UI
 # Return value can be shown in text form in UI
 def get_exposure1(chan: int):
@@ -701,8 +701,7 @@ def reference_const_PID_stabilisator_with_timing(mode: bool, reference_wl: float
             PID_current = PID_current + PID_step
             wlmData.dll.SetDeviationSignalNum(1, PID_current)
             time.sleep(time_pause / 1000)
-        wave_current = wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(chan, 0), wlmConst.cReturnWavelengthVac,
-                                               wlmConst.cReturnFrequency)
+        wave_current = wlmData.dll.GetFrequencyNum(chan, 0)
         delta = reference - wave_current
         print(delta)
         abs_dev = abs(delta)
@@ -725,7 +724,7 @@ def reference_const_PID_stabilisator_with_timing(mode: bool, reference_wl: float
             falters += 1
             while((PID_current + PID_step) > max_PID_val or (PID_current + PID_step) < 0):
                 PID_step = PID_step / 2
-            if(falters >= 20):
+            if(falters >= 50):
                 return -42
         else:
             failed = False
@@ -736,3 +735,82 @@ def reference_const_PID_stabilisator_with_timing(mode: bool, reference_wl: float
             stabilised = False
         if ((time.time() - time1) > stabilisation_time):
             break
+def reference_const_PID_stabilisator_with_timing_version_for_test(mode: bool, reference_wl: float, koef: float, max_PID_val: int,
+                                                                  time_pause: int, stabilisation_time: int, start_PID_point=4096 / 2,
+                                                                  chan=1):
+    '''
+        The function stabilises the reference value of frequency
+        2nd version of algorithm
+
+        :param mode: True - reference_wl should be frequency
+        :param reference_wl: frequency or wavelength (no matter in fact, unless you didn't set the right mode. We use frequencies inside algorithm anyway)
+        :param koef: koef of dependency between PID mV and frequency
+        :param max_PID_val: max val in mV for PID
+        :param time_pause: pause after setting value needed
+        :param start_PID_point: starting point of PID setting.
+        :param chan: shows the channel to use
+        :return: nothing or -42 (PID is out of range)
+    '''
+    stabilised = False
+    failed = False
+    falters = 0
+    PID_step = 0
+    PID_current = start_PID_point
+    reference = reference_wl
+    if (not mode):
+        reference = wlmData.dll.ConvertUnit(reference, wlmConst.cReturnWavelengthVac,
+                                            wlmConst.cReturnFrequency)
+    time1 = time.time()
+    wave_current = wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(chan, 0), wlmConst.cReturnWavelengthVac,
+                                               wlmConst.cReturnFrequency)
+    delta_prev = 0
+    div = 1
+    while (True):
+        if (not stabilised):
+            PID_current = PID_current + PID_step
+            wlmData.dll.SetDeviationSignalNum(1, PID_current)
+            time.sleep(time_pause / 1000)
+        wave_current = wlmData.dll.GetFrequencyNum(chan, 0)
+        delta = reference - wave_current
+        print(delta)
+        abs_dev = abs(delta)
+        # #prevents situations with excessive difference between previous and current deltas
+        # while(True and delta_prev != 0):
+        #     if(abs_dev > delta_prev):
+        #         div = abs_dev / delta_prev
+        #         print(div)
+        #     else:
+        #         div = delta_prev / abs_dev
+        #         print(div)
+        #     if(div > 100000):
+        #         wave_current = wlmData.dll.GetFrequencyNum(chan, 0)
+        #         delta = reference - wave_current
+        #         print(delta)
+        #         abs_dev = abs(delta)
+        #     else:
+        #         break
+        # 0.125 changes in 180 kHz. it's the 7th from point int THz view of freq
+        if (abs_dev <= 5e-06):
+            if (delta > 0):
+                PID_step = -0.25
+            elif (delta < 0):
+                PID_step = 0.25
+        else:
+            PID_step = delta / koef
+        if ((PID_current + PID_step) > max_PID_val or (PID_current + PID_step) < 0):
+            failed = True
+            falters += 1
+            while((PID_current + PID_step) > max_PID_val or (PID_current + PID_step) < 0):
+                PID_step = PID_step / 2
+            if(falters >= 100):
+                return -42
+        else:
+            failed = False
+            falters = 0
+        if (round(delta, 7) == 0.0000000):
+            stabilised = True
+        elif (stabilised):
+            stabilised = False
+        if ((time.time() - time1) > stabilisation_time):
+            break
+        delta_prev = abs_dev

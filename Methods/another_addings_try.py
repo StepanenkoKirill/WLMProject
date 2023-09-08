@@ -97,13 +97,14 @@ else:
     # active_chnl1 = wlmData.dll.GetActiveChannel(3, ctypes.byref(port), 0)
     # print(x, active_chnl1, port.value)
     # print(round(wlmData.dll.GetWavelengthNum(2,0),6))
-    # 580.04145 - 4096
+    # 580.0415 - 4096
     # 580.03530 - 0
 
-    wave = 580.035300
+    wave = 580.04
     time_pause = wlmData.dll.GetExposureNum(2, 1, 0)
     start_PID = wlmData.dll.GetDeviationSignalNum(1, 0)
-    print(WLM_methods.reference_const_PID_stabilisator_with_timing(False, wave, WLM_methods.cDependFrequencyPID, 4096,
+    print(WLM_methods.reference_const_PID_stabilisator_with_timing_version_for_test(False, wave,
+                                                           WLM_methods.cDependFrequencyPID, 4096,
                                                            time_pause*3, 240, start_PID, 2))
 
     # up = wlmData.dll.ConvertUnit(580.03530, wlmConst.cReturnWavelengthVac,
