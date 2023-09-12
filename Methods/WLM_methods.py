@@ -622,7 +622,7 @@ def stepping_PID_course(mode: bool, down_reference, upper_reference, stabilisati
         PID_current = PID_current + PID_step_mV
         cur_freq = wlmData.dll.GetFrequencyNum(chan, 0)
         if (cur_freq + delta_freq > u_reference):
-            # _____________________________________________________________________
+            # ____________________________________________________________________
             percent = (u_reference-cur_freq) / delta_freq
             if( percent > 0.1 and percent <= 1. and abs(PID_step_mV*percent) >= 0.125):
                 PID_current = PID_current - PID_step_mV
@@ -635,7 +635,7 @@ def stepping_PID_course(mode: bool, down_reference, upper_reference, stabilisati
                     flag = True
                 if (not flag):
                     i += 1
-            # _____________________________________________________________________
+            # ____________________________________________________________________
             break
         wlmData.dll.SetDeviationSignalNum(1, PID_current)
         freq = time_counter(cur_freq, chan)
