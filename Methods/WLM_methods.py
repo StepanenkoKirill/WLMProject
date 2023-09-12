@@ -504,12 +504,10 @@ def time_counter(ref_frequency: float, chan: int):
     :param chan: channel to use
     :return: new frequency
     '''
-    cur_freq = wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(chan, 0), wlmConst.cReturnWavelengthVac,
-                                       wlmConst.cReturnFrequency)
+    cur_freq = wlmData.dll.GetFrequencyNum(chan, 0)
     while((cur_freq - ref_frequency) == 0.0000000):
-        cur_freq = wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(chan, 0), wlmConst.cReturnWavelengthVac,
-                                        wlmConst.cReturnFrequency)
-        time.sleep(1)
+        cur_freq = wlmData.dll.GetFrequencyNum(chan, 0)
+        time.sleep(0.001)
     return cur_freq
 
 def triangle_PID_course(mode: bool, down_reference, upper_reference, stabilisation_time,
@@ -591,7 +589,7 @@ def del_mod(absc_list, ord_list, index_mod, breadth):
         del absc_list[k2]
         del ord_list[k2]
 def stepping_PID_course(mode: bool, down_reference, upper_reference, stabilisation_time,
-                        PID_step_mV, time_limit):
+                        PID_step_mV, time_limit, chan = 1):
     assert stabilisation_time < time_limit, "Error: too short time limit"
     koef = -2.23e-06 * 1.5225
     flag = False
@@ -611,25 +609,25 @@ def stepping_PID_course(mode: bool, down_reference, upper_reference, stabilisati
 
     time1 = time.time()
     start_PID_point = wlmData.dll.GetDeviationSignalNum(1, 0)
-    reference_const_PID_stabilisator(True, d_reference, koef, max_PID_val,
-                                     wlmData.dll.GetExposureNum(1, 1, 0) * 1.2, stabilisation_time, start_PID_point)
+    time_pause = wlmData.dll.GetExposureNum(chan, 1, 0) * 1.2
+    reference_const_PID_stabilisator_with_timing_version_for_test(True, d_reference, koef, max_PID_val,
+                                                                  time_pause, stabilisation_time, start_PID_point, chan)
     PID_current = wlmData.dll.GetDeviationSignalNum(1, 0)
 
-    d[i] = (abs(wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(1, 0), wlmConst.cReturnWavelengthVac,
-                                        wlmConst.cReturnFrequency) - d_reference), power_meter.read)
+    d[i] = (abs(wlmData.dll.GetFrequencyNum(chan, 0) - d_reference), power_meter.read)
     i += 1
     while (True):
+        # flag chases iterations with too much deviation in measurements
         flag = False
         PID_current = PID_current + PID_step_mV
-        cur_freq = wlmData.dll.ConvertUnit(wlmData.dll.GetWavelengthNum(1, 0), wlmConst.cReturnWavelengthVac,
-                                           wlmConst.cReturnFrequency)
+        cur_freq = wlmData.dll.GetFrequencyNum(chan, 0)
         if (cur_freq + delta_freq > u_reference):
             percent = (u_reference-cur_freq) / delta_freq
             if( percent > 0.1 and percent <= 1. and abs(PID_step_mV*percent) >= 0.125):
                 PID_current = PID_current - PID_step_mV
                 PID_current = PID_current + PID_step_mV*percent
                 wlmData.dll.SetDeviationSignalNum(1, PID_current)
-                freq = time_counter(cur_freq)
+                freq = time_counter(cur_freq, chan)
                 d[i] = (abs(freq - d_reference), power_meter.read)
                 if (d[i][0] / d[i - 1][0] > 1000):
                     del d[i]
@@ -638,7 +636,7 @@ def stepping_PID_course(mode: bool, down_reference, upper_reference, stabilisati
                     i += 1
             break
         wlmData.dll.SetDeviationSignalNum(1, PID_current)
-        freq = time_counter(cur_freq)
+        freq = time_counter(cur_freq, chan)
         d[i] = (abs(freq - d_reference), power_meter.read)
         if(d[i][0]/d[i-1][0] > 1000):
             del d[i]

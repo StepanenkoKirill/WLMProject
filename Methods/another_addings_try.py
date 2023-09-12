@@ -17,15 +17,18 @@ def resonator_info_maker():
     mode = True
     down_reference = 580.038905
     d_freq = wlmData.dll.ConvertUnit(down_reference, wlmConst.cReturnWavelengthVac,
-                            wlmConst.cReturnFrequency)
+                                     wlmConst.cReturnFrequency)
     upper_reference = 580.03750
     u_freq = wlmData.dll.ConvertUnit(upper_reference, wlmConst.cReturnWavelengthVac,
-                            wlmConst.cReturnFrequency)
+                                     wlmConst.cReturnFrequency)
     stabilisation_time = 10
-    PID_step_mV = -0.5 # negative to make higher frequency
+    # negative to make higher frequency
+    PID_step_mV = -0.25
     time_limit = 240
+    channel_to_measure = 2
+
     d = WLM_methods.stepping_PID_course(mode, d_freq, u_freq, stabilisation_time,
-                        PID_step_mV, time_limit)
+                                        PID_step_mV, time_limit, channel_to_measure)
 
     x_absc = [d[0][i][0] for i in range(d[1])]
     y_ord = [d[0][i][1] for i in range(d[1])]
@@ -168,32 +171,6 @@ else:
     # ax2.plot(x_absc, y_ord)
     # plt.ylim(min(y_ord), max(y_ord)+0.05*max(y_ord))
     # plt.show()
-
-    # freq_of_max_mod1 = 0
-    # freq_of_max_mod2 = 0
-    # print("Max mode 1 %.12f" % max_mod1)
-    # for k in range(d[1]):
-    #     if(y[k] == max_mod1):
-    #         freq_of_max_mod1 = x[k]
-    #         break
-    # y.remove(max_mod1)
-    # x.remove(freq_of_max_mod1)
-    # max_mod2 = max(y)
-    # print("Max mode 2 %.12f" % max_mod2)
-    # for k in range(d[1]):
-    #     if(y[k] == max_mod2):
-    #         freq_of_max_mod2 = x[k]
-    #         break
-    # print("Power modes difference %.12f" % abs(max_mod1-max_mod2))
-    # print("Frequency modes difference %.12f" % abs(freq_of_max_mod1 - freq_of_max_mod2))
-    # print(WLM_methods.wl_stabilisation_through_PID_TESTER(ref, koef, max_dev,exposition, start_PID_point))
-    # print(wlmData.dll.GetWavelengthNum(1, 0))
-    # wave1 = wlmData.dll.ConvertUnit(580.038001, wlmConst.cReturnWavelengthVac,
-    #                                        wlmConst.cReturnFrequency)
-    # wave2 = wlmData.dll.ConvertUnit(580.538001, wlmConst.cReturnWavelengthVac,
-    #                                        wlmConst.cReturnFrequency)
-    # print((wave2-wave1)/wave1)
-   #  WLM_methods.wl_stabilisation_through_PID_const(ref, koef, max_dev, exposition*2, timer,  start_PID_point)
 
 
     # changing of wavelength in 3 digit from 9 to 1 after comma returns about 3184.714925527756 mV of delta PID
